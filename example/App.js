@@ -1,86 +1,123 @@
-import * as React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import simpleJsiModule from "react-native-jsi-template";
+import React, {useRef, useState} from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+} from 'react-native';
+import jsi from 'react-native-jsi-template';
+
+const benchmarks = [
+  {
+    name: 'Borwein',
+    iterations: 1000,
+    precision: 100,
+    method: jsi.getOneByPi,
+  },
+  {
+    name: 'GaussLegendre',
+    iterations: 1000,
+    precision: 100,
+    method: jsi.gaussLegendre,
+  },
+  {
+    name: 'RecursiveFactorial',
+    iterations: 1000,
+    precision: 15,
+    method: jsi.factorial,
+  },
+];
+
+const EMPTY_RESULT = {
+  result: '',
+  duration: '',
+};
 
 export default function App() {
-  const [result, setResult] = React.useState();
-  const [deviceName,setDeviceName] = React.useState();
-  const [getItemValue,setGetItemValue] = React.useState();
-
-  React.useEffect(() => {
-    
-    setResult(simpleJsiModule.helloWorld())
-  }, []);
+  const [benchmarkResults, setBenchmarkResults] = useState({
+    Borwein: {
+      ...EMPTY_RESULT,
+    },
+    GaussLegendre: {
+      ...EMPTY_RESULT,
+    },
+    RecursiveFactorial: {
+      ...EMPTY_RESULT,
+    },
+  });
+  const benchmarkResultsRef = useRef(benchmarkResults);
 
   return (
-    <View style={styles.container}>
-      <Text >Result: {result}</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        <TouchableOpacity
+          onPress={() => {
+            benchmarks.forEach(({method, name, iterations, precision}) => {
+              const perfNow = performance.now();
+              const result = method(precision);
 
-      <TouchableOpacity
-        onPress={() => {
-          let perf = performance.now();
-          let value = simpleJsiModule.getDeviceName();
-          console.log(performance.now() - perf);
-          setDeviceName(value);
-        }}
-        style={styles.button}
-      >
-        <Text style={styles.buttonTxt}>
-          Device Name: {deviceName}
-        </Text>
-      </TouchableOpacity>
+              for (let i = 1; i < iterations; i++) {
+                method(precision);
+              }
 
-      <TouchableOpacity
-        onPress={() => {
-          simpleJsiModule.setItem('helloworld',"Hello World");
-        }}
-        style={styles.button}
-      >
-        <Text style={styles.buttonTxt}>
-          setItem: "Hello World"
-        </Text>
-      </TouchableOpacity>
+              const _benchmarkResults = {...benchmarkResultsRef.current};
+              _benchmarkResults[name] = {
+                result,
+                duration: performance.now() - perfNow,
+              };
+              benchmarkResultsRef.current = _benchmarkResults;
+              setBenchmarkResults(_benchmarkResults);
+            });
+          }}
+          style={styles.button}>
+          <Text style={styles.buttonTxt}>Start benchmarks</Text>
+        </TouchableOpacity>
+        {benchmarks.map(({name, iterations, precision, method}, index) => (
+          <View style={styles.item} key={name}>
+            <Text style={styles.algo}>Algo: {name}</Text>
+            <Text>Iterations: {iterations}</Text>
+            <Text>Precision: {precision}</Text>
 
-      <TouchableOpacity
-        onPress={() => {
-          setGetItemValue(simpleJsiModule.getItem("helloworld"));
-        }}
-        style={styles.button}
-      >
-        <Text style={styles.buttonTxt}>
-          getItem: {getItemValue}
-        </Text>
-      </TouchableOpacity>
-
-
-    </View>
+            <Text>Result: {benchmarkResults[name].result}</Text>
+            <Text>Duration: {benchmarkResults[name].duration}</Text>
+          </View>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: 'white',
   },
-  box: {
-    width: 60,
-    height: 60,
-    marginVertical: 20,
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  algo: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
   button: {
-    width: '95%',
+    width: '100%',
     alignSelf: 'center',
     height: 40,
-    backgroundColor: 'green',
+    backgroundColor: 'blue',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius:5,
-    marginVertical:10
-
+    borderRadius: 10,
+    marginVertical: 10,
   },
   buttonTxt: {
-    color: "white"
-  }
+    color: 'white',
+  },
+  item: {
+    marginTop: 20,
+    marginHorizontal: 20,
+  },
 });
